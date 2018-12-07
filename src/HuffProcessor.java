@@ -1,3 +1,4 @@
+import java.util.PriorityQueue;
 
 /**
  * Although this class has a history of several years,
@@ -41,13 +42,75 @@ public class HuffProcessor {
 	 *            Buffered bit stream writing to the output file.
 	 */
 	public void compress(BitInputStream in, BitOutputStream out){
-
-		while (true){
-			int val = in.readBits(BITS_PER_WORD);
-			if (val == -1) break;
-			out.writeBits(BITS_PER_WORD, val);
-		}
+		int[] counts=readForCounts(in);//makes an arraylist of frequencies of each letter where the bit code for the
+		//letter is the index and the value in the array is the frequency
+		HuffNode root=makeTreeFromCounts(counts);//makes a tree using the greedy algorithm such that more frequently used
+		//characters use less bits
+		String[] codings= makeCodingsFromTree(root);//makes an array where each position is the bit for the letter and the
+		//the value at that position is the the binary coding to navigate the tree
+		out.writeBits(BITS_PER_INT, HUFF_TREE);
+		writeHeader(root,out);//writes the header so that the tree can be built
+		in.reset();
+		writeCompressedBits(codings,in,out);//goes through each of the array of pos is 8 bit chunk and the thing at that pos
+		//is its binary coding and uses that to
 		out.close();
+	}
+	private int[] readForCounts(BitInputStream in){
+		int[] ans=new int[ALPH_SIZE + 1];
+		int x=in.readBits(BITS_PER_WORD);
+		while(x !=-1){
+			ans[x]+=1;
+			x=in.readBits(BITS_PER_WORD);
+		}
+		ans[PSEUDO_EOF]=1;
+		return ans;
+	}
+	private HuffNode makeTreeFromCounts(int[] counts){
+		PriorityQueue<HuffNode> pq=new PriorityQueue<>();
+		for(int i=0;i<counts.length;i++){
+			if(counts[i]>0){
+				pq.add(new HuffNode(i,counts[i],null,null));
+			}
+		}
+		while(pq.size()>1){
+			HuffNode left=pq.remove();
+			HuffNode right=pq.remove();
+			HuffNode t=new HuffNode(0,left.myWeight+right.myWeight,left,right);
+			pq.add(t);
+		}
+		HuffNode root= pq.remove();
+		return root;
+	}
+	private String[] makeCodingsFromTree(HuffNode root){
+		String[] encodings=new String[ALPH_SIZE+1];
+		help(encodings, root, "");
+		return encodings;
+	}
+	private void help(String[] ans, HuffNode root, String path){
+		if(root.myLeft==null&&root.myRight==null){
+			ans[root.myValue]=path;
+			return;
+		}
+		help(ans,root.myLeft,path+"0");
+		help(ans,root.myRight,path+"1");
+	}
+	private void writeHeader(HuffNode node,BitOutputStream out){
+		if(node.myLeft==null&&node.myRight==null){
+			out.writeBits(1,1);
+			out.writeBits(BITS_PER_WORD+1,node.myValue);
+			return;
+		}
+		out.writeBits(1,0);
+		writeHeader(node.myLeft,out);
+		writeHeader(node.myRight,out);
+	}
+	private void writeCompressedBits(String[] encoding, BitInputStream in,BitOutputStream out){
+		int x=in.readBits(BITS_PER_WORD);
+		while(x !=PSEUDO_EOF){
+			out.writeBits(encoding[x].length(),Integer.parseInt(encoding[x],2));
+			in.readBits(BITS_PER_WORD);
+		}
+		out.writeBits(encoding[x].length(),Integer.parseInt(encoding[x],2));
 	}
 	/**
 	 * Decompresses a file. Output file must be identical bit-by-bit to the
