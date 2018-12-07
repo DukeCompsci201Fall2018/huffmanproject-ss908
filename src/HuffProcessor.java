@@ -67,6 +67,9 @@ public class HuffProcessor {
 	}
 	private HuffNode makeTreeFromCounts(int[] counts){
 		PriorityQueue<HuffNode> pq=new PriorityQueue<>();
+		if(myDebugLevel>=DEBUG_HIGH){
+			System.out.printf("pq created with %d nodes \n",pq.size());
+		}
 		for(int i=0;i<counts.length;i++){
 			if(counts[i]>0){
 				pq.add(new HuffNode(i,counts[i],null,null));
@@ -89,6 +92,9 @@ public class HuffProcessor {
 	private void help(String[] ans, HuffNode root, String path){
 		if(root.myLeft==null&&root.myRight==null){
 			ans[root.myValue]=path;
+			if(myDebugLevel>=DEBUG_HIGH){
+				System.out.printf("encoding for %d is %s \n",root.myValue,path);
+			}
 			return;
 		}
 		help(ans,root.myLeft,path+"0");
@@ -105,10 +111,10 @@ public class HuffProcessor {
 		writeHeader(node.myRight,out);
 	}
 	private void writeCompressedBits(String[] encoding, BitInputStream in,BitOutputStream out){
-		int x=in.readBits(BITS_PER_WORD);
+		int x=in.readBits(BITS_PER_WORD+1);
 		while(x !=PSEUDO_EOF){
 			out.writeBits(encoding[x].length(),Integer.parseInt(encoding[x],2));
-			in.readBits(BITS_PER_WORD);
+			in.readBits(BITS_PER_WORD+1);
 		}
 		out.writeBits(encoding[x].length(),Integer.parseInt(encoding[x],2));
 	}
@@ -125,6 +131,9 @@ public class HuffProcessor {
 		int bits=in.readBits(BITS_PER_INT);
 		if(bits!=HUFF_TREE) {
 			throw new HuffException("illegal header starts with" + bits);
+		}
+		if(bits==-1){
+			throw new HuffException("illegal header start with" + bits);
 		}
 		HuffNode root=readTreeHeader(in);//reads the tree header to build the tree for letters
 		readCompressedBits(root,in,out);//read the bits after the header and translating it using the tree
