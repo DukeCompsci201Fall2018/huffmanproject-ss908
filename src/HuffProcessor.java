@@ -67,7 +67,9 @@ public class HuffProcessor {
 			x=in.readBits(BITS_PER_WORD);
 		}
 		ans[PSEUDO_EOF]=1;
-		System.out.println("readForCounts worked");
+		if(myDebugLevel>=DEBUG_HIGH){
+			System.out.println("readForCounts no infinte loop");
+		}
 		return ans;
 	}
 	private HuffNode makeTreeFromCounts(int[] counts){
@@ -86,14 +88,18 @@ public class HuffProcessor {
 			HuffNode t=new HuffNode(0,left.myWeight+right.myWeight,left,right);
 			pq.add(t);
 		}
-		System.out.println("makeTreeFromTreeCounts worked");
+		if(myDebugLevel>=DEBUG_HIGH){
+			System.out.println("makeTreeFromTreeCounts no infinite loop");
+		}
 		HuffNode root= pq.remove();
 		return root;
 	}
 	private String[] makeCodingsFromTree(HuffNode root){
 		String[] encodings=new String[ALPH_SIZE+1];
 		help(encodings, root, "");
-		System.out.println("makeCodingsfromtree worked");
+		if(myDebugLevel>=DEBUG_HIGH){
+			System.out.println("makeCodingsfromtree no infite loop");
+		}
 		return encodings;
 	}
 	private void help(String[] ans, HuffNode root, String path){
@@ -118,16 +124,20 @@ public class HuffProcessor {
 		writeHeader(node.myRight,out);
 	}
 	private void writeCompressedBits(String[] encoding, BitInputStream in,BitOutputStream out){
-		for(int i=0;i<encoding.length;i++){
-			System.out.println(i + " " + encoding[i]);
+		if(myDebugLevel>=DEBUG_HIGH){
+			for(int i=0;i<encoding.length;i++){
+				System.out.println("The position and what it has as it s values in encodings " + i + " " + encoding[i]);
+			}
 		}
-		int x=in.readBits(BITS_PER_WORD);
-		while(x !=-1){
+		int x=in.readBits(BITS_PER_WORD);//this was my error I had +1
+		while(x !=-1){//this was my error i had x=PSEUDO_EOF
 			String code=encoding[x];
 			out.writeBits(code.length(),Integer.parseInt(code,2));
-			x=in.readBits(BITS_PER_WORD);
+			x=in.readBits(BITS_PER_WORD);//this was my error I had +1. I ALSO DID NOT REDEFINE X SO IT INFINITE LOOPED
 		}
-		System.out.println("terminated write compressed bits");
+		if(myDebugLevel>=DEBUG_HIGH){
+			System.out.println("writeCompressedBits didn't infite loop");
+		}
 		out.writeBits(encoding[PSEUDO_EOF].length(),Integer.parseInt(encoding[PSEUDO_EOF],2));
 	}
 	/**
