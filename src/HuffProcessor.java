@@ -61,10 +61,10 @@ public class HuffProcessor {
 	public void decompress(BitInputStream in, BitOutputStream out){
 		int bits=in.readBits(BITS_PER_INT);
 		if(bits!=HUFF_TREE) {
-			throw new HuffException("illegal hdeaer starts with" + bits);
+			throw new HuffException("illegal header starts with" + bits);
 		}
-		HuffNode root=readTreeHeader(in);
-		readCompressedBits(root,in,out);
+		HuffNode root=readTreeHeader(in);//reads the tree header to build the tree for letters
+		readCompressedBits(root,in,out);//read the bits after the header and translating it using the tree
 		out.close();
 	}
 	private HuffNode readTreeHeader(BitInputStream in){
